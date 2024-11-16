@@ -1,14 +1,16 @@
 mod cli;
 mod swaync;
+mod notification;
 
 use swaync::SwayNCProxy;
 
 use clap::Parser;
 use cli::{parse_duration, Cli};
 
-use std::sync::{Arc, Mutex};
+use std::{collections::HashMap, sync::{Arc, Mutex}};
 use tokio::sync::oneshot;
 use tokio::time::sleep;
+use zbus::{zvariant::Value, Connection, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -16,6 +18,9 @@ async fn main() -> Result<()> {
 
     let connection = Connection::session().await?;
     let proxy = SwayNCProxy::new(&connection).await?;
+
+    let connection_notifications = Connection::session().await?;
+    let proxy_notifications = notification::NotificationsProxy::new(&connection_notifications).await?;
 
     proxy.set_dnd(&true).await?;
 
@@ -48,5 +53,18 @@ async fn main() -> Result<()> {
 
     // unset Dnd
     proxy.set_dnd(&false).await?;
+    let mut hints = HashMap::new();
+    hints.insert("urgency", &Value::U8(2));
+
+    let _ = proxy_notifications.notify(
+        "focus-time",
+        0,
+        "selection-mode",
+        "Focus time over", format!("{:?} have passed", duration).as_str(),
+        &[],
+        hints,
+        0,
+    ).await?;
+
     Ok(())
 }
