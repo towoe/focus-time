@@ -1,16 +1,19 @@
-use std::time::Duration;
-use crate::swaync_interface::SwayNCInterface;
+use crate::config::Config;
 use crate::notification_interface::NotificationInterface;
 use crate::sway_ipc_interface::SwayIpcInterface;
+use crate::swaync_interface::SwayNCInterface;
 
 use anyhow::Result;
 
-use std::{collections::HashMap, sync::{Arc, Mutex}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 use tokio::sync::oneshot;
 use tokio::time::sleep;
 use zbus::zvariant::Value;
 
-pub async fn run(duration: Duration) -> Result<()> {
+pub async fn run(config: Config) -> Result<()> {
     // Initialize the interfaces
     let swaync = SwayNCInterface::new().await?;
     let notify = NotificationInterface::new().await?;
@@ -20,11 +23,9 @@ pub async fn run(duration: Duration) -> Result<()> {
     let (tx, rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
 
-
     // Set the tools to the desired state
     swaync.enable_dnd().await?;
     sway.set_bar_mode_invisible().await?;
-
 
     // Set the Ctrl+C handler
     // This is needed so the program does not just end on Ctrl+c, but clean up
@@ -40,7 +41,7 @@ pub async fn run(duration: Duration) -> Result<()> {
 
     // Wait for the `duration` specified time or a Ctrl+C signal
     tokio::select! {
-        _ = sleep(duration) => {},
+        _ = sleep(config.duration) => {},
         _ = rx => {
             println!("\nReceived Ctrl+C, starting cleanup...");
         },
@@ -53,12 +54,13 @@ pub async fn run(duration: Duration) -> Result<()> {
     let mut hints = HashMap::new();
     hints.insert("urgency", &Value::U8(2));
 
-    let _ = notify.notify(
-        "Focus time over",
-        &format!("{:?} have passed", duration),
-        hints,
-    ).await?;
+    let _ = notify
+        .notify(
+            "Focus time over",
+            &format!("{:?} have passed", config.duration),
+            hints,
+        )
+        .await?;
 
     Ok(())
-
 }
