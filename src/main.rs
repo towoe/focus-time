@@ -22,6 +22,8 @@ async fn main() -> Result<()> {
     let connection_notifications = Connection::session().await?;
     let proxy_notifications = notification::NotificationsProxy::new(&connection_notifications).await?;
 
+    let mut connection_sway = swayipc_async::Connection::new().await.expect("Error connecting to sway");
+
     proxy.set_dnd(&true).await?;
 
     let duration = if let Some(duration) = parse_duration(&args.duration) {
@@ -31,6 +33,8 @@ async fn main() -> Result<()> {
         eprintln!("Invalid duration format. Use <number><unit> where unit is s, m, or h");
         std::process::exit(1);
     };
+
+    connection_sway.run_command("bar mode invisible").await.expect("Error setting sway bar mode");
 
     let (tx, rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
@@ -53,6 +57,7 @@ async fn main() -> Result<()> {
 
     // unset Dnd
     proxy.set_dnd(&false).await?;
+    connection_sway.run_command("bar mode dock").await.expect("Error setting sway bar mode");
     let mut hints = HashMap::new();
     hints.insert("urgency", &Value::U8(2));
 
