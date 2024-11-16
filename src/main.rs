@@ -1,4 +1,7 @@
 mod cli;
+mod swaync;
+
+use swaync::SwayNCProxy;
 
 use clap::Parser;
 use cli::{parse_duration, Cli};
@@ -6,16 +9,6 @@ use cli::{parse_duration, Cli};
 use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
 use tokio::time::sleep;
-use zbus::{proxy, Connection, Result};
-
-#[proxy(
-    interface = "org.erikreider.swaync.cc",
-    default_service = "org.erikreider.swaync.cc",
-    default_path = "/org/erikreider/swaync/cc"
-)]
-trait SwayNC {
-    async fn set_dnd(&self, state: &bool) -> Result<()>;
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
