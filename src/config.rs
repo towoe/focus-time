@@ -5,6 +5,8 @@ use std::time::Duration;
 pub struct Config {
     /// Duration of the focus timer.
     pub duration: Duration,
+    pub no_notification: bool,
+    pub keep_status_bar: bool,
 }
 
 impl Config {
@@ -24,7 +26,15 @@ impl Config {
             // already set in the `Cli` struct.
             None => Duration::from_secs(25 * 60),
         };
-        Self { duration }
+
+        let no_notification = args.no_notification;
+        let keep_status_bar = args.keep_status_bar;
+
+        Self {
+            duration,
+            no_notification,
+            keep_status_bar,
+        }
     }
 }
 

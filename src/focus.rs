@@ -16,7 +16,6 @@ use zbus::zvariant::Value;
 pub async fn run(config: Config) -> Result<()> {
     // Initialize the interfaces
     let swaync = SwayNCInterface::new().await?;
-    let notify = NotificationInterface::new().await?;
     let mut sway = SwayIpcInterface::new().await?;
 
     // Open channels to communicate with the Ctrl+C handler
@@ -25,7 +24,9 @@ pub async fn run(config: Config) -> Result<()> {
 
     // Set the tools to the desired state
     swaync.enable_dnd().await?;
-    sway.set_bar_mode_invisible().await?;
+    if !config.keep_status_bar {
+        sway.set_bar_mode_invisible().await?;
+    }
 
     // Set the Ctrl+C handler
     // This is needed so the program does not just end on Ctrl+c, but clean up
@@ -49,18 +50,24 @@ pub async fn run(config: Config) -> Result<()> {
 
     // Restore the tools and notify the user
     swaync.disable_dnd().await?;
-    sway.set_bar_mode_dock().await?;
+
+    if !config.keep_status_bar {
+        sway.set_bar_mode_dock().await?;
+    }
 
     let mut hints = HashMap::new();
     hints.insert("urgency", &Value::U8(2));
 
-    let _ = notify
-        .notify(
-            "Focus time over",
-            &format!("{:?} have passed", config.duration),
-            hints,
-        )
-        .await?;
+    if !config.no_notification {
+        let notify = NotificationInterface::new().await?;
+        let _ = notify
+            .notify(
+                "Focus time over",
+                &format!("{:?} have passed", config.duration),
+                hints,
+            )
+            .await?;
+    }
 
     Ok(())
 }
