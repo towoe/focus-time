@@ -1,8 +1,10 @@
 mod cli;
 mod swaync;
+mod swaync_interface;
 mod notification;
+mod notification_interface;
+mod sway_ipc_interface;
 
-use swaync::SwayNCProxy;
 
 use clap::Parser;
 use cli::{parse_duration, Cli};
@@ -10,21 +12,23 @@ use cli::{parse_duration, Cli};
 use std::{collections::HashMap, sync::{Arc, Mutex}};
 use tokio::sync::oneshot;
 use tokio::time::sleep;
-use zbus::{zvariant::Value, Connection, Result};
+use zbus::{zvariant::Value};
+
+use anyhow::Result;
+
+use swaync_interface::SwayNCInterface;
+use notification_interface::NotificationInterface;
+use sway_ipc_interface::SwayIpcInterface;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
 
-    let connection = Connection::session().await?;
-    let proxy = SwayNCProxy::new(&connection).await?;
+    let swaync = SwayNCInterface::new().await?;
+    let notify = NotificationInterface::new().await?;
+    let mut sway = SwayIpcInterface::new().await?;
 
-    let connection_notifications = Connection::session().await?;
-    let proxy_notifications = notification::NotificationsProxy::new(&connection_notifications).await?;
-
-    let mut connection_sway = swayipc_async::Connection::new().await.expect("Error connecting to sway");
-
-    proxy.set_dnd(&true).await?;
+    swaync.enable_dnd().await?;
 
     let duration = if let Some(duration) = parse_duration(&args.duration) {
         println!("Setting DND for {:?}", duration);
@@ -34,7 +38,7 @@ async fn main() -> Result<()> {
         std::process::exit(1);
     };
 
-    connection_sway.run_command("bar mode invisible").await.expect("Error setting sway bar mode");
+    sway.set_bar_mode_invisible().await?;
 
     let (tx, rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
@@ -55,20 +59,17 @@ async fn main() -> Result<()> {
         },
     }
 
-    // unset Dnd
-    proxy.set_dnd(&false).await?;
-    connection_sway.run_command("bar mode dock").await.expect("Error setting sway bar mode");
+    // Restore the tools and notify the user
+    swaync.disable_dnd().await?;
+    sway.set_bar_mode_dock().await?;
+    
     let mut hints = HashMap::new();
     hints.insert("urgency", &Value::U8(2));
 
-    let _ = proxy_notifications.notify(
-        "focus-time",
-        0,
-        "selection-mode",
-        "Focus time over", format!("{:?} have passed", duration).as_str(),
-        &[],
+    let _ = notify.notify(
+        "Focus time over",
+        &format!("{:?} have passed", duration),
         hints,
-        0,
     ).await?;
 
     Ok(())
