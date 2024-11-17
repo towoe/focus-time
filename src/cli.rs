@@ -16,4 +16,8 @@ pub struct Cli {
     /// Keep the status bar visible
     #[arg(short = 's', long)]
     pub keep_status_bar: bool,
+
+    /// Log level (e.g. "info", "debug", "warn", "error")
+    #[arg(short, long, default_value = "error")]
+    pub log_level: String,
 }

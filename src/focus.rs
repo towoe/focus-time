@@ -13,6 +13,8 @@ use tokio::sync::oneshot;
 use tokio::time::sleep;
 use zbus::zvariant::Value;
 
+use log::debug;
+
 pub async fn run(config: Config) -> Result<()> {
     // Initialize the interfaces
     let swaync = SwayNCInterface::new().await?;
@@ -44,7 +46,7 @@ pub async fn run(config: Config) -> Result<()> {
     tokio::select! {
         _ = sleep(config.duration) => {},
         _ = rx => {
-            println!("\nReceived Ctrl+C, starting cleanup...");
+            debug!("\nReceived Ctrl+C, starting cleanup...");
         },
     }
 

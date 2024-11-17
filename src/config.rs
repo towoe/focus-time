@@ -1,6 +1,8 @@
 use crate::cli::Cli;
 use std::time::Duration;
 
+use log::{debug, error, info};
+
 /// Configuration for the focus timer.
 pub struct Config {
     /// Duration of the focus timer.
@@ -19,22 +21,25 @@ impl Config {
     /// # Returns
     ///
     /// A new `Config` instance with the specified duration.
-    pub fn set(args: &Cli) -> Self {
+    pub fn set(args: &Cli) -> Result<Self, String> {
         let duration = match parse_duration(&args.duration) {
             Some(d) => d,
-            // Default to 25 minutes. This branch should not be used, as the `default_value` is
-            // already set in the `Cli` struct.
-            None => Duration::from_secs(25 * 60),
+            // If no value can be extracted, propagate this to the caller
+            None => return Err("Invalid duration specified".to_string()),
         };
+        info!("Duration set to: {:?}", duration);
 
         let no_notification = args.no_notification;
         let keep_status_bar = args.keep_status_bar;
 
-        Self {
+        debug!("Notifications requested: {}", !no_notification);
+        debug!("Status bar hide requested: {}", !keep_status_bar);
+
+        Ok(Self {
             duration,
             no_notification,
             keep_status_bar,
-        }
+        })
     }
 }
 
@@ -68,7 +73,7 @@ pub fn parse_duration(input: &str) -> Option<Duration> {
         "h" => Some(Duration::from_secs(value * 60 * 60)),
         "d" => Some(Duration::from_secs(value * 60 * 60 * 24)),
         _ => {
-            println!("{unit_part}");
+            error!("Invalid duration unit: {}", unit_part);
             None
         }
     }

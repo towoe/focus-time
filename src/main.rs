@@ -12,12 +12,20 @@ use cli::Cli;
 use config::Config;
 
 use anyhow::Result;
+use env_logger::Env;
+use log::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
 
-    let config = Config::set(&args);
+    env_logger::Builder::from_env(Env::default().default_filter_or(&args.log_level)).init();
+    info!("Starting focus timer");
+
+    let config = Config::set(&args).unwrap_or_else(|e| {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    });
 
     focus::run(config).await?;
 
