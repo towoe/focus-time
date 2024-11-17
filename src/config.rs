@@ -9,6 +9,7 @@ pub struct Config {
     pub duration: Duration,
     pub no_notification: bool,
     pub keep_status_bar: bool,
+    pub print_time: bool,
 }
 
 impl Config {
@@ -31,6 +32,7 @@ impl Config {
 
         let no_notification = args.no_notification;
         let keep_status_bar = args.keep_status_bar;
+        let print_time = args.print_time;
 
         debug!("Notifications requested: {}", !no_notification);
         debug!("Status bar hide requested: {}", !keep_status_bar);
@@ -39,6 +41,7 @@ impl Config {
             duration,
             no_notification,
             keep_status_bar,
+            print_time,
         })
     }
 }

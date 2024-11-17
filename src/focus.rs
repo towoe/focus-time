@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::display;
 use crate::notification_interface::NotificationInterface;
 use crate::sway_ipc_interface::SwayIpcInterface;
 use crate::swaync_interface::SwayNCInterface;
@@ -42,6 +43,10 @@ pub async fn run(config: Config) -> Result<()> {
     })
     .expect("Error setting Ctrl+C handler");
 
+    if config.print_time {
+        tokio::spawn(display::print_remaining_time(config.duration));
+    }
+
     // Wait for the `duration` specified time or a Ctrl+C signal
     tokio::select! {
         _ = sleep(config.duration) => {},
@@ -49,6 +54,8 @@ pub async fn run(config: Config) -> Result<()> {
             debug!("\nReceived Ctrl+C, starting cleanup...");
         },
     }
+    // Make sure the cursor is shown. Should not be a problem if it was not disabled.
+    print!("\x1B[?25h"); // Show cursor
 
     // Restore the tools and notify the user
     swaync.disable_dnd().await?;

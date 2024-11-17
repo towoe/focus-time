@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod display;
 mod focus;
 mod notification;
 mod notification_interface;

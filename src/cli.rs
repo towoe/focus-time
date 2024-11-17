@@ -17,6 +17,10 @@ pub struct Cli {
     #[arg(short = 's', long)]
     pub keep_status_bar: bool,
 
+    // Print the remaining time
+    #[arg(short = 'p', long)]
+    pub print_time: bool,
+
     /// Log level (e.g. "info", "debug", "warn", "error")
     #[arg(short, long, default_value = "error")]
     pub log_level: String,
