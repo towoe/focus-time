@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod display;
 mod focus;
+mod focus_interface;
 mod notification;
 mod notification_interface;
 mod sway_ipc_interface;

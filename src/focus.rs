@@ -6,13 +6,16 @@ use crate::swaync_interface::SwayNCInterface;
 
 use anyhow::Result;
 
+use crate::focus_interface::FocusTime;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 use tokio::sync::oneshot;
 use tokio::time::sleep;
 use zbus::zvariant::Value;
+use zbus::Connection;
 
 use log::debug;
 
@@ -47,6 +50,8 @@ pub async fn run(config: Config) -> Result<()> {
         tokio::spawn(display::print_remaining_time(config.duration));
     }
 
+    let _dbus_conn = start_dbus_service(config.duration).await?;
+
     // Wait for the `duration` specified time or a Ctrl+C signal
     tokio::select! {
         _ = sleep(config.duration) => {},
@@ -79,4 +84,37 @@ pub async fn run(config: Config) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Starts a D-Bus service that provides a FocusTime interface.
+/// This interface can be used to query the remaining time of the focus timer.
+/// The service is registered under the name `org.towoe.FocusTime`.
+/// The interface provides a method `get_remaining_time` that returns the remaining time in HH:MM:SS format.
+///
+/// # Arguments
+///
+/// * `duration` - The total duration of the focus timer
+///
+/// # Returns
+///
+/// A D-Bus connection to the service
+///
+/// # Client example
+///
+/// $ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime org.towoe.FocusTime GetRemainingTime
+async fn start_dbus_service(duration: Duration) -> Result<Connection> {
+    debug!("Starting D-Bus service");
+    let conn = Connection::session().await?;
+    conn.object_server()
+        .at(
+            "/org/towoe/FocusTime",
+            FocusTime {
+                duration,
+                start: std::time::Instant::now(),
+            },
+        )
+        .await?;
+    conn.request_name("org.towoe.FocusTime").await?;
+    debug!("mhm");
+    Ok(conn)
 }
