@@ -52,10 +52,13 @@ pub async fn run(config: Config) -> Result<()> {
 
     let _dbus_conn = start_dbus_service(config.duration, Arc::clone(&tx)).await?;
 
+    let mut timed_end = true;
+
     // Wait for the `duration` specified time or a Ctrl+C signal
     tokio::select! {
         _ = sleep(config.duration) => {},
         _ = rx => {
+            timed_end = false;
             debug!("\nReceived Ctrl+C, starting cleanup...");
         },
     }
@@ -72,7 +75,7 @@ pub async fn run(config: Config) -> Result<()> {
     let mut hints = HashMap::new();
     hints.insert("urgency", &Value::U8(2));
 
-    if !config.no_notification {
+    if !config.no_notification && timed_end {
         let notify = NotificationInterface::new().await?;
         let _ = notify
             .notify(
