@@ -50,7 +50,7 @@ pub async fn run(config: Config) -> Result<()> {
         tokio::spawn(display::print_remaining_time(config.duration));
     }
 
-    let _dbus_conn = start_dbus_service(config.duration).await?;
+    let _dbus_conn = start_dbus_service(config.duration, Arc::clone(&tx)).await?;
 
     // Wait for the `duration` specified time or a Ctrl+C signal
     tokio::select! {
@@ -102,7 +102,10 @@ pub async fn run(config: Config) -> Result<()> {
 /// # Client example
 ///
 /// $ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime org.towoe.FocusTime GetRemainingTime
-async fn start_dbus_service(duration: Duration) -> Result<Connection> {
+async fn start_dbus_service(
+    duration: Duration,
+    tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+) -> Result<Connection> {
     debug!("Starting D-Bus service");
     let conn = Connection::session().await?;
     conn.object_server()
@@ -111,6 +114,7 @@ async fn start_dbus_service(duration: Duration) -> Result<Connection> {
             FocusTime {
                 duration,
                 start: std::time::Instant::now(),
+                tx,
             },
         )
         .await?;
