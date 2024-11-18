@@ -31,7 +31,10 @@ pub async fn print_remaining_time(duration: std::time::Duration) {
         let hours = remaining.as_secs() / 3600;
         match (hours, minutes, seconds) {
             (1.., _, _) => {
-                print!("\x1B[2K\rTime remaining: {:02}:{:02}:{:02}", hours, minutes, 0);
+                print!(
+                    "\x1B[2K\rTime remaining: {:02}:{:02}:{:02}",
+                    hours, minutes, 0
+                );
             }
             (0, 1.., _) => print!("\x1B[2K\rTime remaining: {:02}:{:02}", minutes, 0),
             (0, 0, 10..) => {

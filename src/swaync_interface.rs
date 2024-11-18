@@ -1,6 +1,6 @@
 // src/swaync_interface.rs
-use zbus::{Connection, Result};
 use crate::swaync::SwayNCProxy;
+use zbus::{Connection, Result};
 
 pub struct SwayNCInterface {
     pub proxy: SwayNCProxy<'static>,
@@ -24,5 +24,4 @@ impl SwayNCInterface {
     pub async fn disable_dnd(&self) -> Result<()> {
         self.set_dnd(&false).await
     }
-
 }
