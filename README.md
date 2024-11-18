@@ -28,20 +28,40 @@ time:
 $ focus-time
 ```
 
-Set a custom time:
+Set a custom time by specifying the duration with a number and unit (e.g. `5s`,
+`10m`, `1h`):
 
 ```sh
 $ focus-time 20m
-```
-
-To print the remaining time:
-
-```sh
-$ focus-time -p
 ```
 
 For a full list of available options, use:
 
 ```sh
 $ focus-time --help
+```
+
+### Client access
+
+When the application is running, it can be accessed via D-Bus, to retrieve the
+remaining time and to stop it.
+
+For example, `busctl` can be used to print the remaining time:
+
+```
+$ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime \
+org.towoe.FocusTime GetRemainingTime
+```
+
+### Integration
+
+To integrate Focus Time with Sway, you can bind keys to start a 25-minute focus
+session and stop the timer using the following configuration, typically located
+at `~/.config/sway/config`:
+
+```ini
+# Focus time
+bindsym $mod+o exec focus-time 25m
+bindsym $mod+Shift+o exec busctl --user call org.towoe.FocusTime \
+/org/towoe/FocusTime org.towoe.FocusTime StopTimer
 ```
