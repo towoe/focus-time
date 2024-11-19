@@ -22,7 +22,7 @@ impl Config {
     /// # Returns
     ///
     /// A new `Config` instance with the specified duration.
-    pub fn set(args: &Cli) -> Result<Self, String> {
+    pub fn new(args: &Cli) -> Result<Self, String> {
         let duration = match parse_duration(&args.duration) {
             Some(d) => d,
             // If no value can be extracted, propagate this to the caller
