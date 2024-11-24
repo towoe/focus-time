@@ -17,12 +17,18 @@ use zbus::Connection;
 
 use log::debug;
 
+#[derive(PartialEq)]
+pub enum AbortSignal {
+    CtrlC,
+    Dbus,
+}
+
 pub struct Focus {
     /// Configuration
     config: Config,
     timer: Timer,
-    rx: Mutex<Option<oneshot::Receiver<()>>>,
-    tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    rx: Mutex<Option<oneshot::Receiver<AbortSignal>>>,
+    tx: Arc<Mutex<Option<oneshot::Sender<AbortSignal>>>>,
 }
 
 pub fn new(config: Config) -> Focus {
@@ -57,7 +63,7 @@ impl Focus {
         ctrlc::set_handler(move || {
             let mut tx_lock = tx_clone.lock().unwrap();
             if let Some(tx) = tx_lock.take() {
-                let _ = tx.send(());
+                let _ = tx.send(AbortSignal::CtrlC);
             }
         })
         .expect("Error setting Ctrl+C handler");
@@ -68,15 +74,27 @@ impl Focus {
 
         let _dbus_conn = self.start_dbus_service().await?;
 
-        let mut timed_end = true;
+        let mut timer_aborted: Option<AbortSignal> = None;
 
         let rx = self.rx.lock().unwrap().take().unwrap();
         // Wait for the `duration` specified time or a Ctrl+C signal
         tokio::select! {
-            _ = sleep(self.config.duration) => {},
-            _ = rx => {
-                timed_end = false;
-                debug!("\nReceived Ctrl+C, starting cleanup...");
+                _ = sleep(self.config.duration) => {},
+                signal = rx => {
+                    match signal {
+                    Ok(AbortSignal::CtrlC) => {
+                        timer_aborted = Some(AbortSignal::CtrlC);
+                        println!("\x1B[2K\rFocus timer aborted at: {}", self.timer);
+                        debug!("\nReceived Ctrl+C, starting cleanup...");
+                    },
+                    Ok(AbortSignal::Dbus) => {
+                        timer_aborted = Some(AbortSignal::Dbus);
+                        debug!("\nReceived D-Bus signal, starting cleanup...");
+                    },
+                    Err(_) => {
+                        debug!("\nReceived error from channel, starting cleanup...");
+                    },
+                }
             },
         }
         // Make sure the cursor is shown. Should not be a problem if it was not disabled.
@@ -92,7 +110,9 @@ impl Focus {
         let mut hints = HashMap::new();
         hints.insert("urgency", &Value::U8(2));
 
-        if !self.config.no_notification && timed_end {
+        if timer_aborted == Some(AbortSignal::Dbus)
+            || (!self.config.no_notification && timer_aborted.is_none())
+        {
             let notify = NotificationInterface::new().await?;
             let _ = notify
                 .notify("Focus time over", &format!("{}", self.timer), hints)
