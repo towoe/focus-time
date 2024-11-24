@@ -72,8 +72,8 @@ impl std::fmt::Display for Timer {
         let (h, m, s) = self.remaining_time_parts();
         write!(
             f,
-            "({:02}:{:02}:{:02}) {:02}:{:02}:{:02}",
-            th, tm, ts, h, m, s
+            "{:02}:{:02}:{:02} [{:02}:{:02}:{:02}]",
+            h, m, s, th, tm, ts
         )
     }
 }
