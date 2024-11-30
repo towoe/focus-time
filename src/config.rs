@@ -38,6 +38,10 @@ pub fn load_from_file(cli_config: &Option<String>) -> Result<ConfigFile, String>
     // otherwise use the default location
     let config_path = if let Some(path) = cli_config {
         let config_path = Path::new(&path).to_path_buf();
+        debug!(
+            "Trying to access config file from command argument `{:?}`",
+            config_path
+        );
         // If the user specified a path, but the file does not exist, return with an error now as
         // the following steps would not be what the user might expect
         if !config_path.exists() {
@@ -50,7 +54,7 @@ pub fn load_from_file(cli_config: &Option<String>) -> Result<ConfigFile, String>
             .join("focus-time")
             .join("config.toml")
     };
-    debug!("Trying to access config file `{:?}`", config_path);
+    debug!("Using config file `{:?}`", config_path);
 
     if config_path.exists() {
         let config_content =

@@ -48,13 +48,17 @@ pub struct FocusConfig {
 /// # Returns
 ///
 /// A `FocusConfig` struct containing the merged configuration.
-pub fn create_config(file_config: ConfigFile, args: Cli) -> FocusConfig {
-    FocusConfig {
-        duration: get_duration(&args.duration, &file_config.duration).unwrap(),
+pub fn create_config(file_config: ConfigFile, args: Cli) -> Result<FocusConfig, String> {
+    let duration = match get_duration(&args.duration, &file_config.duration) {
+        Ok(duration) => duration,
+        Err(e) => return Err(e),
+    };
+    Ok(FocusConfig {
+        duration,
         no_notification: args.no_notification || file_config.no_notification.unwrap_or(false),
         keep_status_bar: args.keep_status_bar || file_config.keep_status_bar.unwrap_or(false),
         print_time: args.print_time || file_config.print_time.unwrap_or(false),
-    }
+    })
 }
 
 /// Helper function to extract the value for the duration from multiple sources. If a value is
