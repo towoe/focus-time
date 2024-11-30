@@ -295,4 +295,73 @@ mod tests {
         assert_eq!(parse_duration("42 m"), None);
         assert_eq!(parse_duration(""), None);
     }
+
+    #[test]
+    fn test_get_duration_arg() {
+        let arg = Some("10m".to_string());
+        let config = None;
+        assert_eq!(
+            get_duration(&arg, &config),
+            Ok(Duration::from_secs(10 * 60))
+        );
+    }
+    #[test]
+    fn test_get_duration_arg_precedence() {
+        let arg = Some("20m".to_string());
+        let config = Some("1h".to_string());
+        assert_eq!(
+            get_duration(&arg, &config),
+            Ok(Duration::from_secs(20 * 60))
+        );
+        let arg = Some("10m".to_string());
+        let config = Some("m".to_string());
+        assert_eq!(
+            get_duration(&arg, &config),
+            Ok(Duration::from_secs(10 * 60))
+        );
+    }
+    #[test]
+    fn test_get_duration_config() {
+        let arg = None;
+        let config = Some("25m".to_string());
+        assert_eq!(
+            get_duration(&arg, &config),
+            Ok(Duration::from_secs(25 * 60))
+        );
+    }
+    #[test]
+    fn test_get_duration_default() {
+        let arg = None;
+        let config = None;
+        assert_eq!(
+            get_duration(&arg, &config),
+            Ok(Duration::from_secs(25 * 60))
+        );
+    }
+    #[test]
+    fn test_get_duration_invalid() {
+        // Invalid duration in argument
+        let arg = Some("4".to_string());
+        let config = None;
+        assert_eq!(
+            get_duration(&arg, &config),
+            Err("Invalid duration: '4'".to_string())
+        );
+
+        // Invalid duration in config
+        let arg = None;
+        let config = Some("m".to_string());
+        assert_eq!(
+            get_duration(&arg, &config),
+            Err("Invalid duration: 'm'".to_string())
+        );
+
+        // Invalid duration in argument, should not fall back to config value
+        let arg = Some("42".to_string());
+        let config = Some("42h".to_string());
+        assert_eq!(
+            get_duration(&arg, &config),
+            Err("Invalid duration: '42'".to_string())
+        );
+    }
 }
