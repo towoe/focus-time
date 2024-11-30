@@ -1,5 +1,6 @@
 use crate::cli::Cli;
 use crate::config::ConfigFile;
+use crate::focus_interface::FocusTime;
 use crate::notification_interface::NotificationInterface;
 use crate::sway_ipc_interface::SwayIpcInterface;
 use crate::swaync_interface::SwayNCInterface;
@@ -7,7 +8,7 @@ use crate::timer::Timer;
 
 use anyhow::Result;
 
-use crate::focus_interface::FocusTime;
+use regex::Regex;
 use std::time::Duration;
 use std::{
     collections::HashMap,
@@ -99,6 +100,11 @@ fn get_duration(
 /// * `Option<Duration>` - Returns `Some(Duration)` if the input is valid, otherwise `None`.
 pub fn parse_duration(input: &str) -> Option<Duration> {
     if input.is_empty() {
+        return None;
+    }
+
+    let re = Regex::new(r"^\d+[dhms]+$").unwrap();
+    if !re.is_match(input.trim()) {
         return None;
     }
 
@@ -254,5 +260,39 @@ impl Focus {
             .await?;
         conn.request_name("org.towoe.FocusTime").await?;
         Ok(conn)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_duration_valid() {
+        assert_eq!(parse_duration("50s"), Some(Duration::from_secs(50)));
+        assert_eq!(parse_duration("100s"), Some(Duration::from_secs(100)));
+        assert_eq!(parse_duration("4m"), Some(Duration::from_secs(4 * 60)));
+        assert_eq!(parse_duration("3h"), Some(Duration::from_secs(3 * 60 * 60)));
+        assert_eq!(
+            parse_duration("1d"),
+            Some(Duration::from_secs(24 * 60 * 60))
+        );
+    }
+
+    #[test]
+    fn test_parse_duration_invalid() {
+        assert_eq!(parse_duration("50"), None);
+        assert_eq!(parse_duration("s"), None);
+        assert_eq!(parse_duration("s10m"), None);
+        assert_eq!(parse_duration("m"), None);
+        assert_eq!(parse_duration("m45"), None);
+        assert_eq!(parse_duration("h"), None);
+        assert_eq!(parse_duration("d"), None);
+        assert_eq!(parse_duration("s13"), None);
+        assert_eq!(parse_duration("secs"), None);
+        assert_eq!(parse_duration("12x"), None);
+        assert_eq!(parse_duration("x"), None);
+        assert_eq!(parse_duration("42 m"), None);
+        assert_eq!(parse_duration(""), None);
     }
 }
