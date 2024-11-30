@@ -493,6 +493,7 @@ dependencies = [
  "dirs",
  "env_logger",
  "log",
+ "regex",
  "serde",
  "swayipc-async",
  "tokio",
