@@ -1,5 +1,6 @@
 use crate::cli::Cli;
-use crate::config::ConfigFile;
+use crate::config::{self, ConfigFile};
+use crate::focus;
 use crate::focus_interface::FocusTime;
 use crate::notification_interface::NotificationInterface;
 use crate::sway_ipc_interface::SwayIpcInterface;
@@ -19,7 +20,7 @@ use tokio::time::sleep;
 use zbus::zvariant::Value;
 use zbus::Connection;
 
-use log::{debug, error, trace};
+use log::{debug, error, info, trace};
 
 #[derive(PartialEq)]
 pub enum AbortSignal {
@@ -142,17 +143,34 @@ pub struct Focus {
     tx: Arc<Mutex<Option<oneshot::Sender<AbortSignal>>>>,
 }
 
-pub fn new(config: FocusConfig) -> Focus {
+pub fn new(args: Cli) -> Result<Focus, String> {
+    info!("Loading file config");
+    let file_config = match config::load_from_file(&args.config) {
+        Ok(config) => config,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+
+    info!("Creating focus timer configuration");
+    let config = match focus::create_config(file_config, args) {
+        Ok(config) => config,
+        Err(e) => {
+            return Err(e);
+        }
+    };
+
     let (tx, rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
     let rx = Mutex::new(Some(rx));
     let timer = Timer::new(config.duration);
-    Focus {
+
+    Ok(Focus {
         config,
         timer,
         rx,
         tx,
-    }
+    })
 }
 
 impl Focus {
