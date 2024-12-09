@@ -12,7 +12,7 @@ system, see the [Rust docs](https://www.rust-lang.org/tools/install).
 
 Clone the repository and build the project:
 
-```sh
+```console
 $ git clone https://github.com/towoe/focus-time.git
 $ cd focus-time
 $ cargo build --release
@@ -31,7 +31,7 @@ $ focus-time
 Set a custom time by specifying the duration with a number and unit (e.g. `5s`,
 `10m`, `1h`):
 
-```sh
+```console
 $ focus-time 20m
 ```
 
