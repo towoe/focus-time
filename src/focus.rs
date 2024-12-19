@@ -179,6 +179,8 @@ impl Focus {
         let swaync = SwayNCInterface::new().await?;
         let mut sway = SwayIpcInterface::new().await?;
 
+        let bar_mode = sway.get_bar_mode().await?;
+
         // Set the tools to the desired state
         swaync.enable_dnd().await?;
         if !self.config.keep_status_bar {
@@ -233,7 +235,7 @@ impl Focus {
         swaync.disable_dnd().await?;
 
         if !self.config.keep_status_bar {
-            sway.set_bar_mode_dock().await?;
+            sway.restore_bar_mode(bar_mode).await?;
         }
 
         let mut hints = HashMap::new();
