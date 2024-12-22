@@ -2,8 +2,10 @@ use clap::Parser;
 
 /// Command line interface for the wait command
 #[derive(Parser)]
-#[command(name = "wait")]
-#[command(version, about = "Waits for specified duration")]
+#[command(
+    version,
+    about = "Create distraction free environment for a limited time."
+)]
 pub struct Cli {
     /// Duration to wait (e.g. "5s", "2m", "1h")
     pub duration: Option<String>,
