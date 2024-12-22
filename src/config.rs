@@ -1,4 +1,4 @@
-/// This modules handles the configuration from the config file.
+/// This module handles the configuration from the config file.
 /// The config is automatically loaded when the program starts. The default file location is
 /// `XDG_CONFIG_HOME/focus-time/config.toml`. Another file can be specified as an argument when
 /// running the program.

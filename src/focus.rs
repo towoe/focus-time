@@ -8,7 +8,6 @@ use crate::swaync_interface::SwayNCInterface;
 use crate::timer::Timer;
 
 use anyhow::Result;
-
 use regex::Regex;
 use std::time::Duration;
 use std::{
@@ -22,9 +21,12 @@ use zbus::Connection;
 
 use log::{debug, error, info, trace};
 
+/// Represents the possible signals that can abort the focus timer.
 #[derive(PartialEq)]
 pub enum AbortSignal {
+    /// Signal for Ctrl+C interruption.
     CtrlC,
+    /// Signal for D-Bus interruption.
     Dbus,
 }
 
@@ -33,9 +35,13 @@ pub enum AbortSignal {
 /// control the behaviour of the focus timer.
 #[derive(Debug)]
 pub struct FocusConfig {
+    /// Duration of the focus timer.
     duration: Duration,
+    /// Whether to disable notifications.
     no_notification: bool,
+    /// Whether to keep the status bar visible.
     keep_status_bar: bool,
+    /// Whether to print the remaining time.
     print_time: bool,
 }
 
@@ -63,9 +69,18 @@ pub fn create_config(file_config: ConfigFile, args: Cli) -> Result<FocusConfig, 
 }
 
 /// Helper function to extract the value for the duration from multiple sources. If a value is
-/// specified, but not in the correct way, and error is returned without checking other values.
-/// This behaviour is inteded to prevent undesired default time durations when the supplied value
+/// specified, but not in the correct way, an error is returned without checking other values.
+/// This behaviour is intended to prevent undesired default time durations when the supplied value
 /// was incorrect.
+///
+/// # Arguments
+///
+/// * `from_arg` - An optional string containing the duration from the command line argument.
+/// * `from_config` - An optional string containing the duration from the configuration file.
+///
+/// # Returns
+///
+/// A `Result` containing the `Duration` if successful, or a `String` error message if the duration is invalid.
 fn get_duration(
     from_arg: &Option<String>,
     from_config: &Option<String>,
@@ -135,14 +150,27 @@ pub fn parse_duration(input: &str) -> Option<Duration> {
     }
 }
 
+/// Represents the focus timer with its configuration, timer, and channels for abort signals.
 pub struct Focus {
-    /// Configuration
+    /// Configuration for the focus timer.
     config: FocusConfig,
+    /// Timer for the focus session.
     timer: Timer,
+    /// Receiver for abort signals.
     rx: Mutex<Option<oneshot::Receiver<AbortSignal>>>,
+    /// Sender for abort signals.
     tx: Arc<Mutex<Option<oneshot::Sender<AbortSignal>>>>,
 }
 
+/// Creates a new `Focus` instance with the provided command line arguments.
+///
+/// # Arguments
+///
+/// * `args` - A `Cli` struct containing command line arguments.
+///
+/// # Returns
+///
+/// A `Result` containing the new `Focus` instance or an error message.
 pub fn new(args: Cli) -> Result<Focus, String> {
     info!("Loading file config");
     let file_config = match config::load_from_file(&args.config) {
@@ -174,6 +202,14 @@ pub fn new(args: Cli) -> Result<Focus, String> {
 }
 
 impl Focus {
+    /// Runs the focus timer.
+    ///
+    /// This function initializes the necessary interfaces, sets up the environment,
+    /// and waits for the specified duration or an abort signal.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating the success or failure of the operation.
     pub async fn run(&self) -> Result<()> {
         // Initialize the interfaces
         let swaync = SwayNCInterface::new().await?;
@@ -210,9 +246,9 @@ impl Focus {
         let rx = self.rx.lock().unwrap().take().unwrap();
         // Wait for the `duration` specified time or a Ctrl+C signal
         tokio::select! {
-                _ = sleep(self.config.duration) => {},
-                signal = rx => {
-                    match signal {
+            _ = sleep(self.config.duration) => {},
+            signal = rx => {
+                match signal {
                     Ok(AbortSignal::CtrlC) => {
                         timer_aborted = Some(AbortSignal::CtrlC);
                         println!("\x1B[2K\rFocus timer aborted at: {}", self.timer);
@@ -258,13 +294,9 @@ impl Focus {
     /// The service is registered under the name `org.towoe.FocusTime`.
     /// The interface provides a method `get_remaining_time` that returns the remaining time in HH:MM:SS format.
     ///
-    /// # Arguments
-    ///
-    /// * `duration` - The total duration of the focus timer
-    ///
     /// # Returns
     ///
-    /// A D-Bus connection to the service
+    /// A `Result` containing the D-Bus connection to the service or an error.
     ///
     /// # Client example
     ///
@@ -329,6 +361,7 @@ mod tests {
             Ok(Duration::from_secs(10 * 60))
         );
     }
+
     #[test]
     fn test_get_duration_arg_precedence() {
         let arg = Some("20m".to_string());
@@ -344,6 +377,7 @@ mod tests {
             Ok(Duration::from_secs(10 * 60))
         );
     }
+
     #[test]
     fn test_get_duration_config() {
         let arg = None;
@@ -353,6 +387,7 @@ mod tests {
             Ok(Duration::from_secs(25 * 60))
         );
     }
+
     #[test]
     fn test_get_duration_default() {
         let arg = None;
@@ -362,6 +397,7 @@ mod tests {
             Ok(Duration::from_secs(25 * 60))
         );
     }
+
     #[test]
     fn test_get_duration_invalid() {
         // Invalid duration in argument
