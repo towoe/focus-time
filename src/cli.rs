@@ -16,7 +16,7 @@ pub struct Cli {
     #[arg(short = 's', long)]
     pub keep_status_bar: bool,
 
-    // Print the remaining time
+    /// Print the remaining time
     #[arg(short = 'p', long)]
     pub print_time: bool,
 
