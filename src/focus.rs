@@ -184,7 +184,7 @@ impl Focus {
         // Set the tools to the desired state
         swaync.enable_dnd().await?;
         if !self.config.keep_status_bar {
-            sway.set_bar_mode_invisible().await?;
+            sway.set_bars_invisible().await?;
         }
 
         // Set the Ctrl+C handler

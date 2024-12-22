@@ -1,5 +1,5 @@
-use log::debug;
-use swayipc_async::Connection;
+use log::{debug, trace};
+use swayipc_async::{BarMode, Connection};
 
 pub struct SwayIpcInterface {
     connection: Connection,
@@ -16,46 +16,50 @@ impl SwayIpcInterface {
         Ok(())
     }
 
-    pub async fn set_bar_mode_invisible(&mut self) -> Result<(), swayipc_async::Error> {
-        self.run_command("bar mode invisible").await
-    }
-
-    pub async fn set_bar_mode_dock(&mut self) -> Result<(), swayipc_async::Error> {
-        self.run_command("bar mode dock").await
-    }
-
-    pub async fn set_bar_mode_hide(&mut self) -> Result<(), swayipc_async::Error> {
-        self.run_command("bar mode hide").await
-    }
-
-    pub async fn get_bar_mode(&mut self) -> Result<swayipc_async::BarMode, swayipc_async::Error> {
+    pub async fn set_bars_invisible(&mut self) -> Result<(), swayipc_async::Error> {
         let ids = self.connection.get_bar_ids().await?;
-        if let Some(first_id) = ids.first() {
-            let bar_config = self.connection.get_bar_config(first_id.to_string()).await?;
-            Ok(bar_config.mode)
-        } else {
-            Ok(swayipc_async::BarMode::Dock)
+        debug!("Setting bars invisible: {:?}", ids);
+        for id in ids {
+            self.set_bar_mode(&id, BarMode::Invisible).await?;
         }
+        Ok(())
+    }
+
+    async fn set_bar_mode(
+        &mut self,
+        bar_id: &str,
+        bar_mode: BarMode,
+    ) -> Result<(), swayipc_async::Error> {
+        self.run_command(&format!("bar {} mode {:?}", bar_id, bar_mode))
+            .await
+    }
+
+    pub async fn get_bar_mode(&mut self) -> Result<Vec<(String, BarMode)>, swayipc_async::Error> {
+        let ids = self.connection.get_bar_ids().await?;
+        let mut bar_modes = Vec::new();
+        for id in ids {
+            let bar_config = self.connection.get_bar_config(id.clone()).await?;
+            bar_modes.push((id, bar_config.mode));
+        }
+        trace!("List of bar modes: {:?}", bar_modes);
+        Ok(bar_modes)
     }
 
     pub async fn restore_bar_mode(
         &mut self,
-        bar_mode: swayipc_async::BarMode,
+        bar_modes: Vec<(String, BarMode)>,
     ) -> Result<(), swayipc_async::Error> {
-        // Do not restore if the mode has change since the timer was started
-        // swayipc_async::BarMode does not implement PartialEq
-        if format!("{:?}", self.get_bar_mode().await?)
-            != format!("{:?}", swayipc_async::BarMode::Invisible)
-        {
-            debug!("Bar mode not 'Invisible' anymore, has changed externally. Not restoring.");
-            return Ok(());
+        let current_modes = self.get_bar_mode().await?;
+        for (bar_id, bar_mode) in bar_modes {
+            if let Some((_, current_mode)) = current_modes.iter().find(|(id, _)| id == &bar_id) {
+                if format!("{:?}", current_mode) != format!("{:?}", BarMode::Invisible) {
+                    debug!("Bar mode for {} not 'Invisible' anymore, has changed externally. Not restoring.", bar_id);
+                    continue;
+                }
+            }
+            debug!("Restoring bar mode for {} to {:?}", bar_id, bar_mode);
+            self.set_bar_mode(&bar_id, bar_mode).await?;
         }
-        debug!("Restoring bar mode to {:?}", bar_mode);
-        match bar_mode {
-            swayipc_async::BarMode::Dock => self.set_bar_mode_dock().await,
-            swayipc_async::BarMode::Invisible => self.set_bar_mode_invisible().await,
-            swayipc_async::BarMode::Hide => self.set_bar_mode_hide().await,
-            _ => Ok(()),
-        }
+        Ok(())
     }
 }
