@@ -34,28 +34,44 @@ impl SwayIpcInterface {
             .await
     }
 
-    pub async fn get_bar_mode(&mut self) -> Result<Vec<(String, BarMode)>, swayipc_async::Error> {
-        let ids = self.connection.get_bar_ids().await?;
+    pub async fn get_bar_mode(&mut self) -> Option<Vec<(String, BarMode)>> {
+        let ids = self.connection.get_bar_ids().await.ok()?;
         let mut bar_modes = Vec::new();
         for id in ids {
-            let bar_config = self.connection.get_bar_config(id.clone()).await?;
+            let bar_config = self.connection.get_bar_config(id.clone()).await.ok()?;
             bar_modes.push((id, bar_config.mode));
         }
         trace!("List of bar modes: {:?}", bar_modes);
-        Ok(bar_modes)
+        Some(bar_modes)
     }
 
     pub async fn restore_bar_mode(
         &mut self,
-        bar_modes: Vec<(String, BarMode)>,
+        bar_modes: Option<Vec<(String, BarMode)>>,
     ) -> Result<(), swayipc_async::Error> {
-        let current_modes = self.get_bar_mode().await?;
+        let bar_modes = match bar_modes {
+            Some(modes) => modes,
+            None => {
+                debug!("No previous bar modes provided, defaulting all bars to Dock mode");
+                let ids = self.connection.get_bar_ids().await?;
+                ids.into_iter().map(|id| (id, BarMode::Dock)).collect()
+            }
+        };
+
+        let current_modes = self.get_bar_mode().await.unwrap_or_default();
         for (bar_id, bar_mode) in bar_modes {
             if let Some((_, current_mode)) = current_modes.iter().find(|(id, _)| id == &bar_id) {
                 if format!("{:?}", current_mode) != format!("{:?}", BarMode::Invisible) {
                     debug!("Bar mode for {} not 'Invisible' anymore, has changed externally. Not restoring.", bar_id);
                     continue;
                 }
+            } else {
+                debug!(
+                    "Could not determine current bar mode for {}, assuming Dock",
+                    bar_id
+                );
+                self.set_bar_mode(&bar_id, BarMode::Dock).await?;
+                continue;
             }
             debug!("Restoring bar mode for {} to {:?}", bar_id, bar_mode);
             self.set_bar_mode(&bar_id, bar_mode).await?;
