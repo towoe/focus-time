@@ -16,7 +16,11 @@ Clone the repository and build the project:
 $ git clone https://github.com/towoe/focus-time.git
 $ cd focus-time
 $ cargo build --release
+$ cargo install --path .
 ```
+
+The binary will be installed to `~/.cargo/bin/`. Make sure this directory is in
+your `PATH` environment variable.
 
 ## Usage
 
