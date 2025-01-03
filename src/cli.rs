@@ -10,7 +10,7 @@ pub struct Cli {
     /// Duration to wait (e.g. "5s", "2m", "1h")
     pub duration: Option<String>,
 
-    /// Disable notifications
+    /// Disable timer-end notification
     #[arg(short = 'n', long)]
     pub no_notification: bool,
 
