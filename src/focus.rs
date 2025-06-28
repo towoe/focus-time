@@ -24,8 +24,6 @@ use log::{debug, error, info, trace};
 /// Represents the possible signals that can abort the focus timer.
 #[derive(PartialEq)]
 pub enum AbortSignal {
-    /// Signal for Ctrl+C interruption.
-    CtrlC,
     /// Signal for D-Bus interruption.
     Dbus,
 }
@@ -220,18 +218,6 @@ impl Focus {
             sway.set_bars_invisible().await?;
         }
 
-        // Set the Ctrl+C handler
-        // This is needed so the program does not just end on Ctrl+c, but clean up
-        // before. For example, unset the do not disturb state.
-        let tx_clone = Arc::clone(&self.tx);
-        ctrlc::set_handler(move || {
-            let mut tx_lock = tx_clone.lock().unwrap();
-            if let Some(tx) = tx_lock.take() {
-                let _ = tx.send(AbortSignal::CtrlC);
-            }
-        })
-        .expect("Error setting Ctrl+C handler");
-
         if self.config.print_time {
             tokio::spawn(crate::timer::print_remaining_time(self.timer));
         }
@@ -244,13 +230,12 @@ impl Focus {
         // Wait for the `duration` specified time or a Ctrl+C signal
         tokio::select! {
             _ = sleep(self.config.duration) => {},
-            signal = rx => {
-                match signal {
-                    Ok(AbortSignal::CtrlC) => {
-                        timer_aborted = Some(AbortSignal::CtrlC);
+            _ = tokio::signal::ctrl_c() => {
                         println!("\x1B[2K\rFocus timer aborted at: {}", self.timer);
                         debug!("\nReceived Ctrl+C, starting cleanup...");
-                    },
+                },
+            signal = rx => {
+                match signal {
                     Ok(AbortSignal::Dbus) => {
                         timer_aborted = Some(AbortSignal::Dbus);
                         debug!("\nReceived D-Bus signal, starting cleanup...");
