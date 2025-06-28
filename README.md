@@ -1,7 +1,7 @@
 # Focus Time
 
 Focus Time is a command-line application designed to help manage focus sessions
-effectively. It allows to set a time in which notifications are disabled. It
+effectively. It allows you to set a time in which notifications are disabled. It
 integrates with [Sway](https://github.com/swaywm/sway/) and
 [SwayNC](https://github.com/ErikReider/SwayNotificationCenter/).
 
@@ -15,7 +15,6 @@ Clone the repository and build the project:
 ```sh
 $ git clone https://github.com/towoe/focus-time.git
 $ cd focus-time
-$ cargo build --release
 $ cargo install --path .
 ```
 
@@ -39,13 +38,27 @@ Set a custom time by specifying the duration with a number and unit (e.g. `5s`,
 $ focus-time 20m
 ```
 
-For a full list of available options, use:
+To change the default behaviour the following options are available:
+- `-c, --config`: Path to configuration file
+- `-l, --log-level`: Log level (error, warn, info, debug, trace)
+- `-n, --no-notification`: Disable timer-end notification
+- `-p, --print-time`: Print the remaining time continuously
+- `-s, --keep-status-bar`: Keep the status bar visible
 
-```sh
-$ focus-time --help
+## Configuration
+
+Focus Time can be configured using a TOML file. The default location is 
+`~/.config/focus-time/config.toml`, or specify a custom path with `-c`.
+
+Example configuration:
+```toml
+duration = "30m"
+no-notification = false
+keep-status-bar = false
+print-time = false
 ```
 
-### Client access
+## Client access
 
 When the application is running, it can be accessed via D-Bus, to retrieve the
 remaining time and to stop it.
@@ -57,11 +70,10 @@ $ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime \
 org.towoe.FocusTime GetRemainingTime
 ```
 
-### Integration
+## Integration
 
 To integrate Focus Time with Sway, you can bind keys to start a 25-minute focus
-session and stop the timer using the following configuration, typically located
-at `~/.config/sway/config`:
+session and stop the timer using the following configuration.
 
 ```ini
 # Focus time
