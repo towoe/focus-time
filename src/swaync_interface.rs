@@ -17,8 +17,14 @@ impl SwayNCInterface {
     ///
     /// A `Result` containing the new `SwayNCInterface` instance or an error.
     pub async fn new() -> Result<Self> {
-        let connection = Connection::session().await?;
-        let proxy = SwayNCProxy::new(&connection).await?;
+        let connection = Connection::session().await.map_err(|e| {
+            zbus::Error::Failure(format!("Failed to establish D-Bus session connection: {e}"))
+        })?;
+        let proxy = SwayNCProxy::new(&connection).await.map_err(|e| {
+            zbus::Error::Failure(format!(
+                "Failed to connect to SwayNC service. Is SwayNC running? Error: {e}"
+            ))
+        })?;
         Ok(Self { proxy })
     }
 
