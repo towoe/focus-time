@@ -56,10 +56,7 @@ pub struct FocusConfig {
 ///
 /// A `FocusConfig` struct containing the merged configuration.
 pub fn create_config(file_config: ConfigFile, args: Cli) -> Result<FocusConfig, String> {
-    let duration = match get_duration(&args.duration, &file_config.duration) {
-        Ok(duration) => duration,
-        Err(e) => return Err(e),
-    };
+    let duration = get_duration(&args.duration, &file_config.duration)?;
     Ok(FocusConfig {
         duration,
         no_notification: args.no_notification || file_config.no_notification.unwrap_or(false),
@@ -95,14 +92,14 @@ fn get_duration(
             debug!("Using duration from argument: {:?}", duration);
             return Ok(duration);
         } else {
-            return Err(format!("Invalid duration: '{}'", duration));
+            return Err(format!("Invalid duration: '{duration}'"));
         }
     } else if let Some(duration) = from_config {
         if let Some(duration) = parse_duration(duration) {
             debug!("Using duration from config: {:?}", duration);
             return Ok(duration);
         } else {
-            return Err(format!("Invalid duration: '{}'", duration));
+            return Err(format!("Invalid duration: '{duration}'"));
         }
     }
     debug!("Using default duration: 25 minutes");

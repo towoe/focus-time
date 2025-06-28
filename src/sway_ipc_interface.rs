@@ -30,7 +30,7 @@ impl SwayIpcInterface {
         bar_id: &str,
         bar_mode: BarMode,
     ) -> Result<(), swayipc_async::Error> {
-        self.run_command(&format!("bar {} mode {:?}", bar_id, bar_mode))
+        self.run_command(&format!("bar {bar_id} mode {bar_mode:?}"))
             .await
     }
 
@@ -61,7 +61,7 @@ impl SwayIpcInterface {
         let current_modes = self.get_bar_mode().await.unwrap_or_default();
         for (bar_id, bar_mode) in bar_modes {
             if let Some((_, current_mode)) = current_modes.iter().find(|(id, _)| id == &bar_id) {
-                if format!("{:?}", current_mode) != format!("{:?}", BarMode::Invisible) {
+                if format!("{current_mode:?}") != format!("{:?}", BarMode::Invisible) {
                     debug!("Bar mode for {} not 'Invisible' anymore, has changed externally. Not restoring.", bar_id);
                     continue;
                 }
