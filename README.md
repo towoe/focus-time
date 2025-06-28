@@ -65,9 +65,14 @@ remaining time and to stop it.
 
 For example, `busctl` can be used to print the remaining time:
 
-```
+```sh
 $ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime \
-org.towoe.FocusTime GetRemainingTime
+  org.towoe.FocusTime GetRemainingTime
+```
+
+```sh
+$ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime \
+  org.towoe.FocusTime TogglePause
 ```
 
 ## Integration

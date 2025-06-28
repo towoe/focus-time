@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use log::debug;
@@ -8,6 +9,8 @@ use log::debug;
 pub struct Timer {
     duration: Duration,
     start: Instant,
+    paused_time: Duration,
+    is_paused: bool,
 }
 
 impl Timer {
@@ -18,12 +21,12 @@ impl Timer {
     /// * `duration` - The duration for the timer.
     ///
     /// # Returns
-    ///
-    /// A new `Timer` instance.
     pub fn new(duration: Duration) -> Self {
         Self {
             duration,
             start: Instant::now(),
+            paused_time: Duration::from_secs(0),
+            is_paused: false,
         }
     }
 
@@ -42,12 +45,43 @@ impl Timer {
     ///
     /// The remaining duration.
     pub fn remaining(&self) -> Duration {
-        // If the timer is already in the past, the current time is higher
-        if (self.start + self.duration) < Instant::now() {
+        if self.is_paused {
+            self.duration.saturating_sub(self.paused_time)
+        } else if (self.start + self.duration) < Instant::now() {
             Duration::from_secs(0)
         } else {
             self.duration - self.start.elapsed()
         }
+    }
+
+    /// Pauses the timer if it's running.
+    pub fn pause(&mut self) {
+        if !self.is_paused {
+            self.paused_time = self.start.elapsed();
+            self.is_paused = true;
+        }
+    }
+
+    /// Resumes the timer if it's paused.
+    pub fn resume(&mut self) {
+        if self.is_paused {
+            self.start = Instant::now() - self.paused_time;
+            self.is_paused = false;
+        }
+    }
+
+    /// Toggles the timer between paused and running states.
+    pub fn toggle_pause(&mut self) {
+        if self.is_paused {
+            self.resume();
+        } else {
+            self.pause();
+        }
+    }
+
+    /// Returns whether the timer is currently paused.
+    pub fn is_paused(&self) -> bool {
+        self.is_paused
     }
 
     /// Gets the remaining time in hours, minutes, and seconds.
@@ -86,7 +120,7 @@ impl Timer {
     pub fn remaining_str_fixed_format(&self) -> String {
         let (h, m, s) = self.remaining_time_parts();
         debug!("Remaining time: {}:{}:{}", h, m, s);
-        format!("{:02}:{:02}:{:02}", h, m, s)
+        format!("{h:02}:{m:02}:{s:02}")
     }
 
     /// Formats the remaining time as an adapted format string.
@@ -103,7 +137,7 @@ impl Timer {
         let (h, m, s) = self.remaining_time_parts();
         debug!("Remaining time: {}:{}:{}", h, m, s);
         match (h, m, s) {
-            (1.., _, _) => format!("{:02}:{:02}:{:02}", h, m, s),
+            (1.., _, _) => format!("{h:02}:{m:02}:{s:02}"),
             (0, 1.., _) => format!("{:02}:{:02}", m, s - s % 30),
             (0, 0, 10..) => format!("{:02}:{:02}", m, s - s % 10),
             (0, 0, _) => format!("{:02}:{:02}", 0, s),
@@ -126,35 +160,34 @@ impl std::fmt::Display for Timer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (th, tm, ts) = self.timer_time_parts();
         let (h, m, s) = self.remaining_time_parts();
-        write!(
-            f,
-            "{:02}:{:02}:{:02} [{:02}:{:02}:{:02}]",
-            h, m, s, th, tm, ts
-        )
+        write!(f, "{h:02}:{m:02}:{s:02} [{th:02}:{tm:02}:{ts:02}]")
     }
 }
 
-/// Displays a countdown timer in the terminal.
+/// Displays a countdown timer in the terminal with pause support.
 ///
-/// This function shows the remaining time in HH:MM:SS format when hours are present,
-/// or MM:SS format for shorter durations. The display updates with different frequencies
-/// depending on the remaining time:
-/// - Hours remaining: updates every 60 seconds
-/// - Minutes remaining: updates every 10 seconds
-/// - Last minute: updates every second
-///
-/// The cursor is hidden during the countdown and restored when finished.
+/// This function shows the remaining time and updates based on pause state.
+/// The display updates every second and shows "(PAUSED)" when the timer is paused.
 ///
 /// # Arguments
 ///
-/// * `timer` - The timer to display.
-pub async fn print_remaining_time(timer: Timer) {
+/// * `timer` - Arc<Mutex<Timer>> to display with pause support.
+pub async fn print_remaining_time_with_pause(timer: Arc<Mutex<Timer>>) {
     print!("\x1B[?25l"); // Hide cursor
-    while timer.is_remaining() {
-        print!(
-            "\x1B[2K\rTime remaining: {}",
-            timer.remaining_str_adapted_format()
-        );
+    loop {
+        let (remaining, is_paused) = {
+            let timer_guard = timer.lock().unwrap();
+            if !timer_guard.is_remaining() {
+                break;
+            }
+            (
+                timer_guard.remaining_str_adapted_format(),
+                timer_guard.is_paused(),
+            )
+        };
+
+        let status = if is_paused { " (PAUSED)" } else { "" };
+        print!("\x1B[2K\rTime remaining: {remaining}{status}");
         std::io::stdout().flush().unwrap();
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
