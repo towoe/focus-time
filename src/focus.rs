@@ -23,9 +23,11 @@ use log::{debug, error, info, trace};
 
 /// Represents the possible signals that can abort the focus timer.
 #[derive(PartialEq)]
-pub enum AbortSignal {
+pub enum Signal {
     /// Signal for D-Bus interruption.
     Dbus,
+    /// Signal for pausing/resuming the timer.
+    TogglePause,
 }
 
 /// Configuration for the focus timer.
@@ -150,11 +152,9 @@ pub struct Focus {
     /// Configuration for the focus timer.
     config: FocusConfig,
     /// Timer for the focus session.
-    timer: Timer,
-    /// Receiver for abort signals.
-    rx: Mutex<Option<oneshot::Receiver<AbortSignal>>>,
+    timer: Arc<Mutex<Timer>>,
     /// Sender for abort signals.
-    tx: Arc<Mutex<Option<oneshot::Sender<AbortSignal>>>>,
+    tx: Arc<Mutex<Option<oneshot::Sender<Signal>>>>,
 }
 
 /// Creates a new `Focus` instance with the provided command line arguments.
@@ -183,17 +183,11 @@ pub fn new(args: Cli) -> Result<Focus, String> {
         }
     };
 
-    let (tx, rx) = oneshot::channel();
+    let (tx, _rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
-    let rx = Mutex::new(Some(rx));
-    let timer = Timer::new(config.duration);
+    let timer = Arc::new(Mutex::new(Timer::new(config.duration)));
 
-    Ok(Focus {
-        config,
-        timer,
-        rx,
-        tx,
-    })
+    Ok(Focus { config, timer, tx })
 }
 
 impl Focus {
@@ -219,32 +213,58 @@ impl Focus {
         }
 
         if self.config.print_time {
-            tokio::spawn(crate::timer::print_remaining_time(self.timer));
+            let timer_clone = Arc::clone(&self.timer);
+            tokio::spawn(async move {
+                crate::timer::print_remaining_time_with_pause(timer_clone).await;
+            });
         }
 
         let _dbus_conn = self.start_dbus_service().await?;
 
-        let mut timer_aborted: Option<AbortSignal> = None;
+        let mut timer_aborted: Option<Signal> = None;
 
-        let rx = self.rx.lock().unwrap().take().unwrap();
-        // Wait for the `duration` specified time or a Ctrl+C signal
-        tokio::select! {
-            _ = sleep(self.config.duration) => {},
-            _ = tokio::signal::ctrl_c() => {
-                        println!("\x1B[2K\rFocus timer aborted at: {}", self.timer);
-                        debug!("\nReceived Ctrl+C, starting cleanup...");
+        loop {
+            let (new_tx, new_rx) = oneshot::channel();
+            *self.tx.lock().unwrap() = Some(new_tx);
+
+            let current_duration = {
+                let timer = self.timer.lock().unwrap();
+                timer.remaining()
+            };
+
+            if current_duration.is_zero() {
+                break;
+            }
+
+            tokio::select! {
+                _ = sleep(current_duration) => {
+                    break;
                 },
-            signal = rx => {
-                match signal {
-                    Ok(AbortSignal::Dbus) => {
-                        timer_aborted = Some(AbortSignal::Dbus);
-                        debug!("\nReceived D-Bus signal, starting cleanup...");
-                    },
-                    Err(_) => {
-                        debug!("\nReceived error from channel, starting cleanup...");
-                    },
-                }
-            },
+                _ = tokio::signal::ctrl_c() => {
+                    let timer = self.timer.lock().unwrap();
+                    println!("\x1B[2K\rFocus timer aborted at: {}", *timer);
+                    debug!("\nReceived Ctrl+C, starting cleanup...");
+                    break;
+                },
+                signal = new_rx => {
+                    match signal {
+                        Ok(Signal::Dbus) => {
+                            timer_aborted = Some(Signal::Dbus);
+                            debug!("\nReceived D-Bus stop signal, starting cleanup...");
+                            break;
+                        },
+                        Ok(Signal::TogglePause) => {
+                            let mut timer = self.timer.lock().unwrap();
+                            timer.toggle_pause();
+                            debug!("Timer pause toggled: paused = {}", timer.is_paused());
+                        },
+                        Err(_) => {
+                            debug!("\nReceived error from channel, starting cleanup...");
+                            break;
+                        },
+                    }
+                },
+            }
         }
         // Make sure the cursor is shown. Should not be a problem if it was not disabled.
         print!("\x1B[?25h"); // Show cursor
@@ -259,12 +279,16 @@ impl Focus {
         let mut hints = HashMap::new();
         hints.insert("urgency", &Value::U8(2));
 
-        if timer_aborted == Some(AbortSignal::Dbus)
+        if timer_aborted == Some(Signal::Dbus)
             || (!self.config.no_notification && timer_aborted.is_none())
         {
             let notify = NotificationInterface::new().await?;
             let _ = notify
-                .notify("Focus time over", &format!("{}", self.timer), hints)
+                .notify(
+                    "Focus time over",
+                    &format!("{}", *self.timer.lock().unwrap()),
+                    hints,
+                )
                 .await?;
         }
 
@@ -291,7 +315,7 @@ impl Focus {
             .at(
                 "/org/towoe/FocusTime",
                 FocusTime {
-                    timer: self.timer,
+                    timer: Arc::clone(&self.timer),
                     tx,
                 },
             )
