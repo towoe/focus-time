@@ -10,8 +10,8 @@ mod swaync;
 mod swaync_interface;
 mod timer;
 
-use clap::Parser;
-use cli::Cli;
+use clap::{CommandFactory, Parser};
+use cli::{Cli, Commands};
 
 use env_logger::Env;
 use log::info;
@@ -48,7 +48,14 @@ async fn main() -> anyhow::Result<()> {
 
     // Handle subcommands or start the focus timer
     if let Some(command) = args.command {
-        client::handle_command(command).await?;
+        match command {
+            Commands::Completions { shell } => {
+                let mut cmd = cli::Cli::command();
+                let name = cmd.get_name().to_string();
+                clap_complete::generate(shell, &mut cmd, name, &mut std::io::stdout());
+            }
+            _ => client::handle_command(command).await?,
+        }
     } else {
         focus::new(args)?.run().await?;
     }

@@ -42,4 +42,11 @@ pub enum Commands {
     TogglePause,
     /// Get the status of the timer
     Status,
+    /// Generate shell completions
+    #[command(hide = true)]
+    Completions {
+        /// The shell to generate completions for
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
+    },
 }

@@ -92,3 +92,16 @@ session and stop the timer using the following configuration.
 bindsym $mod+o exec focus-time 25m
 bindsym $mod+Shift+o exec focus-time stop
 ```
+
+## Shell Completion
+
+`focus-time` can generate completion scripts for various shells. Use the
+`completions` subcommand to generate a script for your shell.
+
+For example, to generate completions for Zsh, you can run:
+
+```sh
+$ focus-time completions zsh > _focus-time
+```
+
+Store the file `_focus-time` in the appropriate location.
