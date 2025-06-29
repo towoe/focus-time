@@ -38,6 +38,9 @@ pub async fn handle_command(command: Commands) -> Result<()> {
                 println!("{time}");
             }
         }
+        Commands::Completions { .. } => {
+            // This is handled in main.rs and should not be reached here.
+        }
     }
 
     Ok(())
