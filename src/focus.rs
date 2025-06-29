@@ -26,6 +26,8 @@ use log::{debug, error, info, trace};
 pub enum Signal {
     /// Signal for D-Bus interruption.
     Dbus,
+    /// Signal for Ctrl+C interruption.
+    CtrlC,
     /// Signal for pausing/resuming the timer.
     TogglePause,
 }
@@ -242,6 +244,7 @@ impl Focus {
                 },
                 _ = tokio::signal::ctrl_c() => {
                     let timer = self.timer.lock().unwrap();
+                    timer_aborted = Some(Signal::CtrlC);
                     println!("\x1B[2K\rFocus timer aborted at: {}", *timer);
                     debug!("\nReceived Ctrl+C, starting cleanup...");
                     break;
@@ -257,6 +260,10 @@ impl Focus {
                             let mut timer = self.timer.lock().unwrap();
                             timer.toggle_pause();
                             debug!("Timer pause toggled: paused = {}", timer.is_paused());
+                        },
+                        Ok(Signal::CtrlC) => {
+                            // This case should not happen, as we handle Ctrl+C above.
+                            break;
                         },
                         Err(_) => {
                             debug!("\nReceived error from channel, starting cleanup...");
