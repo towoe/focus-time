@@ -25,6 +25,16 @@ impl FocusTime {
         timer.remaining_str_fixed_format()
     }
 
+    /// Retrieves the current pause state of the timer.
+    ///
+    /// # Returns
+    ///
+    /// A `bool` indicating whether the timer is paused.
+    pub async fn get_paused(&self) -> bool {
+        let timer = self.timer.lock().unwrap();
+        timer.is_paused()
+    }
+
     /// Stops the focus timer by sending an abort signal.
     ///
     /// This method locks the mutex, takes the sender if available, and sends an `AbortSignal::Dbus`.
