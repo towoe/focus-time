@@ -8,6 +8,7 @@ use crate::swaync_interface::SwayNCInterface;
 use crate::timer::Timer;
 
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::time::Duration;
 use std::{
@@ -115,12 +116,9 @@ fn get_duration(
 ///
 /// * `Option<Duration>` - Returns `Some(Duration)` if the input is valid, otherwise `None`.
 pub fn parse_duration(input: &str) -> Option<Duration> {
-    if input.is_empty() {
-        return None;
-    }
+    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\d+[dhms]$").unwrap());
 
-    let re = Regex::new(r"^\d+[dhms]+$").unwrap();
-    if !re.is_match(input.trim()) {
+    if input.is_empty() || !RE.is_match(input.trim()) {
         return None;
     }
 
