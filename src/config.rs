@@ -45,7 +45,7 @@ pub fn load_from_file(cli_config: &Option<String>) -> Result<ConfigFile, String>
         // If the user specified a path, but the file does not exist, return with an error now as
         // the following steps would not be what the user might expect
         if !config_path.exists() {
-            return Err(format!("Configuration file not found: {:?}", config_path));
+            return Err(format!("Configuration file not found: {config_path:?}"));
         }
         config_path
     } else {
