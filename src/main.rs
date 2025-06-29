@@ -1,4 +1,5 @@
 mod cli;
+mod client;
 mod config;
 mod focus;
 mod focus_interface;
@@ -46,8 +47,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Log the start of the focus timer
     info!("Starting focus timer");
 
-    // Start the focus timer with the parsed arguments
-    focus::new(args)?.run().await?;
+    // Handle subcommands or start the focus timer
+    if let Some(command) = args.command {
+        client::handle_command(command).await?;
+    } else {
+        focus::new(args)?.run().await?;
+    }
 
     Ok(())
 }
