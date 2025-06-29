@@ -58,23 +58,28 @@ keep-status-bar = false
 print-time = false
 ```
 
-## Client access
+## Controlling a running instance
 
-When the application is running, it can be accessed via D-Bus, to retrieve the
-remaining time and to stop it.
+When the application is running, you can control it using subcommands. This is
+achieved by communicating with the running instance over its D-Bus interface.
 
-For example, `busctl` can be used to print the remaining time:
+- `focus-time status`: Show the remaining time and pause state.
+- `focus-time toggle-pause`: Toggle the pause state of the timer.
+- `focus-time stop`: Stop the timer.
 
+Example:
 ```sh
-$ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime \
-  org.towoe.FocusTime GetRemainingTime
-```
+$ focus-time status
+14:32
 
-```sh
-$ busctl --user call org.towoe.FocusTime /org/towoe/FocusTime \
-  org.towoe.FocusTime TogglePause
-```
+$ focus-time toggle-pause
+Focus timer toggled pause.
 
+$ focus-time status
+14:32 (paused)
+
+$ focus-time stop
+Focus timer stopped.
 ## Integration
 
 To integrate Focus Time with Sway, you can bind keys to start a 25-minute focus
@@ -83,6 +88,5 @@ session and stop the timer using the following configuration.
 ```ini
 # Focus time
 bindsym $mod+o exec focus-time 25m
-bindsym $mod+Shift+o exec busctl --user call org.towoe.FocusTime \
-/org/towoe/FocusTime org.towoe.FocusTime StopTimer
+bindsym $mod+Shift+o exec focus-time stop
 ```

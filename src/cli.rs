@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 /// Command line interface for the wait command
 #[derive(Parser)]
@@ -7,6 +7,9 @@ use clap::Parser;
     about = "Create distraction free environment for a limited time."
 )]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+
     /// Duration to wait (e.g. "5s", "2m", "1h")
     pub duration: Option<String>,
 
@@ -29,4 +32,14 @@ pub struct Cli {
     /// Log level (e.g. "trace", "debug", "info", "warn", "error")
     #[arg(short, long, default_value = "error")]
     pub log_level: String,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Stop the timer
+    Stop,
+    /// Pause/Resume the timer
+    TogglePause,
+    /// Get the status of the timer
+    Status,
 }
