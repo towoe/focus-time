@@ -57,7 +57,7 @@ pub struct FocusConfig {
 /// # Returns
 ///
 /// A `FocusConfig` struct containing the merged configuration.
-pub fn create_config(file_config: ConfigFile, args: Cli) -> Result<FocusConfig, String> {
+pub fn create_config(file_config: ConfigFile, args: Cli) -> anyhow::Result<FocusConfig> {
     let duration = get_duration(&args.duration, &file_config.duration)?;
     Ok(FocusConfig {
         duration,
@@ -79,29 +79,26 @@ pub fn create_config(file_config: ConfigFile, args: Cli) -> Result<FocusConfig, 
 ///
 /// # Returns
 ///
-/// A `Result` containing the `Duration` if successful, or a `String` error message if the duration is invalid.
+/// A `Result` containing the `Duration` if successful, or a `String` error message if the duration
+/// is invalid.
 fn get_duration(
     from_arg: &Option<String>,
     from_config: &Option<String>,
-) -> Result<Duration, String> {
-    trace!(
-        "Parsing duration: argument: {:?} - config:{:?}",
-        from_arg,
-        from_config
-    );
+) -> anyhow::Result<Duration> {
+    trace!("Parsing duration: argument: {from_arg:?} - config:{from_config:?}");
     if let Some(duration) = from_arg {
         if let Some(duration) = parse_duration(duration) {
-            debug!("Using duration from argument: {:?}", duration);
+            debug!("Using duration from argument: {duration:?}");
             return Ok(duration);
         } else {
-            return Err(format!("Invalid duration: '{duration}'"));
+            return Err(anyhow::anyhow!("Invalid duration: '{duration}'"));
         }
     } else if let Some(duration) = from_config {
         if let Some(duration) = parse_duration(duration) {
-            debug!("Using duration from config: {:?}", duration);
+            debug!("Using duration from config: {duration:?}");
             return Ok(duration);
         } else {
-            return Err(format!("Invalid duration: '{duration}'"));
+            return Err(anyhow::anyhow!("Invalid duration: '{duration}'"));
         }
     }
     debug!("Using default duration: 25 minutes");
@@ -143,7 +140,7 @@ pub fn parse_duration(input: &str) -> Option<Duration> {
         "h" => Some(Duration::from_secs(value * 60 * 60)),
         "d" => Some(Duration::from_secs(value * 60 * 60 * 24)),
         _ => {
-            error!("Invalid duration unit: '{}'", unit_part);
+            error!("Invalid duration unit: '{unit_part}'");
             None
         }
     }
@@ -168,22 +165,12 @@ pub struct Focus {
 /// # Returns
 ///
 /// A `Result` containing the new `Focus` instance or an error message.
-pub fn new(args: Cli) -> Result<Focus, String> {
+pub fn new(args: Cli) -> anyhow::Result<Focus> {
     info!("Loading file config");
-    let file_config = match config::load_from_file(&args.config) {
-        Ok(config) => config,
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let file_config = config::load_from_file(&args.config)?;
 
     info!("Creating focus timer configuration");
-    let config = match focus::create_config(file_config, args) {
-        Ok(config) => config,
-        Err(e) => {
-            return Err(e);
-        }
-    };
+    let config = focus::create_config(file_config, args)?;
 
     let (tx, _rx) = oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
@@ -370,8 +357,8 @@ mod tests {
         let arg = Some("10m".to_string());
         let config = None;
         assert_eq!(
-            get_duration(&arg, &config),
-            Ok(Duration::from_secs(10 * 60))
+            get_duration(&arg, &config).unwrap(),
+            Duration::from_secs(10 * 60)
         );
     }
 
@@ -380,14 +367,14 @@ mod tests {
         let arg = Some("20m".to_string());
         let config = Some("1h".to_string());
         assert_eq!(
-            get_duration(&arg, &config),
-            Ok(Duration::from_secs(20 * 60))
+            get_duration(&arg, &config).unwrap(),
+            Duration::from_secs(20 * 60)
         );
         let arg = Some("10m".to_string());
         let config = Some("m".to_string());
         assert_eq!(
-            get_duration(&arg, &config),
-            Ok(Duration::from_secs(10 * 60))
+            get_duration(&arg, &config).unwrap(),
+            Duration::from_secs(10 * 60)
         );
     }
 
@@ -396,8 +383,8 @@ mod tests {
         let arg = None;
         let config = Some("25m".to_string());
         assert_eq!(
-            get_duration(&arg, &config),
-            Ok(Duration::from_secs(25 * 60))
+            get_duration(&arg, &config).unwrap(),
+            Duration::from_secs(25 * 60)
         );
     }
 
@@ -406,8 +393,8 @@ mod tests {
         let arg = None;
         let config = None;
         assert_eq!(
-            get_duration(&arg, &config),
-            Ok(Duration::from_secs(25 * 60))
+            get_duration(&arg, &config).unwrap(),
+            Duration::from_secs(25 * 60)
         );
     }
 
@@ -416,25 +403,22 @@ mod tests {
         // Invalid duration in argument
         let arg = Some("4".to_string());
         let config = None;
-        assert_eq!(
-            get_duration(&arg, &config),
-            Err("Invalid duration: '4'".to_string())
-        );
+        let result = get_duration(&arg, &config);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Invalid duration: '4'");
 
         // Invalid duration in config
         let arg = None;
         let config = Some("m".to_string());
-        assert_eq!(
-            get_duration(&arg, &config),
-            Err("Invalid duration: 'm'".to_string())
-        );
+        let result = get_duration(&arg, &config);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Invalid duration: 'm'");
 
         // Invalid duration in argument, should not fall back to config value
         let arg = Some("42".to_string());
         let config = Some("42h".to_string());
-        assert_eq!(
-            get_duration(&arg, &config),
-            Err("Invalid duration: '42'".to_string())
-        );
+        let result = get_duration(&arg, &config);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Invalid duration: '42'");
     }
 }

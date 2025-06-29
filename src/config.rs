@@ -33,41 +33,35 @@ pub struct ConfigFile {
 ///
 /// A `Result` containing the `ConfigFile` if successful, or a `String` error message if the file
 /// could not be loaded or parsed.
-pub fn load_from_file(cli_config: &Option<String>) -> Result<ConfigFile, String> {
+pub fn load_from_file(cli_config: &Option<String>) -> anyhow::Result<ConfigFile> {
     // Check if the user specified a different location for the config file
     // otherwise use the default location
     let config_path = if let Some(path) = cli_config {
         let config_path = Path::new(&path).to_path_buf();
-        debug!(
-            "Trying to access config file from command argument `{:?}`",
-            config_path
-        );
+        debug!("Trying to access config file from command argument `{config_path:?}`");
         // If the user specified a path, but the file does not exist, return with an error now as
         // the following steps would not be what the user might expect
         if !config_path.exists() {
-            return Err(format!("Configuration file not found: {config_path:?}"));
+            return Err(anyhow::anyhow!(
+                "Configuration file not found: {config_path:?}"
+            ));
         }
         config_path
     } else {
         dirs::config_dir()
-            .expect("Failed to get configuration directory")
+            .ok_or_else(|| anyhow::anyhow!("Failed to get configuration directory"))?
             .join("focus-time")
             .join("config.toml")
     };
-    debug!("Using config file `{:?}`", config_path);
+    debug!("Using config file `{config_path:?}`");
 
     if config_path.exists() {
-        let config_content =
-            std::fs::read_to_string(&config_path).expect("Failed to read configuration file");
-        trace!("Parsing: {:?}", config_content);
+        let config_content = std::fs::read_to_string(&config_path)?;
+        trace!("Parsing: {config_content:?}");
 
-        match toml::from_str(&config_content) {
-            Ok(config) => {
-                trace!("Parsed config: {:?}", config);
-                Ok(config)
-            }
-            Err(e) => Err(e.to_string()),
-        }
+        let config = toml::from_str(&config_content)?;
+        trace!("Parsed config: {config:?}");
+        Ok(config)
     } else {
         debug!("Config file not found. Using default config.");
         Ok(ConfigFile::default())

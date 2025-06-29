@@ -13,7 +13,6 @@ mod timer;
 use clap::Parser;
 use cli::Cli;
 
-use anyhow::Result;
 use env_logger::Env;
 use log::info;
 
@@ -34,7 +33,7 @@ use log::info;
 ///
 /// This function will return an error if the focus timer fails to run.
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     // Log the start of command line argument parsing
     info!("Parsing command line arguments");
 
