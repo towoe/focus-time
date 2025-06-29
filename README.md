@@ -80,6 +80,8 @@ $ focus-time status
 
 $ focus-time stop
 Focus timer stopped.
+```
+
 ## Integration
 
 To integrate Focus Time with Sway, you can bind keys to start a 25-minute focus
