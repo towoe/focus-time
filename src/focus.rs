@@ -116,23 +116,18 @@ fn get_duration(
 ///
 /// * `Option<Duration>` - Returns `Some(Duration)` if the input is valid, otherwise `None`.
 pub fn parse_duration(input: &str) -> Option<Duration> {
-    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\d+[dhms]$").unwrap());
+    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\d+)([dhms])$").unwrap());
 
-    if input.is_empty() || !RE.is_match(input.trim()) {
-        return None;
-    }
-
-    let (number_part, unit_part) = input
-        .trim()
-        .chars()
-        .partition::<String, _>(|c| c.is_ascii_digit());
+    let caps = RE.captures(input.trim())?;
+    let number_part = &caps[1];
+    let unit_part = &caps[2];
 
     let value: u64 = match number_part.parse() {
         Ok(num) => num,
         Err(_) => return None,
     };
 
-    match unit_part.as_str() {
+    match unit_part {
         "s" => Some(Duration::from_secs(value)),
         "m" => Some(Duration::from_secs(value * 60)),
         "h" => Some(Duration::from_secs(value * 60 * 60)),
