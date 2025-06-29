@@ -18,7 +18,7 @@ impl SwayIpcInterface {
 
     pub async fn set_bars_invisible(&mut self) -> Result<(), swayipc_async::Error> {
         let ids = self.connection.get_bar_ids().await?;
-        debug!("Setting bars invisible: {:?}", ids);
+        debug!("Setting bars invisible: {ids:?}");
         for id in ids {
             self.set_bar_mode(&id, BarMode::Invisible).await?;
         }
@@ -41,7 +41,7 @@ impl SwayIpcInterface {
             let bar_config = self.connection.get_bar_config(id.clone()).await.ok()?;
             bar_modes.push((id, bar_config.mode));
         }
-        trace!("List of bar modes: {:?}", bar_modes);
+        trace!("List of bar modes: {bar_modes:?}");
         Some(bar_modes)
     }
 
@@ -62,18 +62,15 @@ impl SwayIpcInterface {
         for (bar_id, bar_mode) in bar_modes {
             if let Some((_, current_mode)) = current_modes.iter().find(|(id, _)| id == &bar_id) {
                 if format!("{current_mode:?}") != format!("{:?}", BarMode::Invisible) {
-                    debug!("Bar mode for {} not 'Invisible' anymore, has changed externally. Not restoring.", bar_id);
+                    debug!("Bar mode for {bar_id} not 'Invisible' anymore, has changed externally. Not restoring.");
                     continue;
                 }
             } else {
-                debug!(
-                    "Could not determine current bar mode for {}, assuming Dock",
-                    bar_id
-                );
+                debug!("Could not determine current bar mode for {bar_id}, assuming Dock");
                 self.set_bar_mode(&bar_id, BarMode::Dock).await?;
                 continue;
             }
-            debug!("Restoring bar mode for {} to {:?}", bar_id, bar_mode);
+            debug!("Restoring bar mode for {bar_id} to {bar_mode:?}");
             self.set_bar_mode(&bar_id, bar_mode).await?;
         }
         Ok(())
