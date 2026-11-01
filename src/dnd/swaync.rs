@@ -20,6 +20,9 @@ pub struct SwayNc {
 }
 
 impl SwayNc {
+    /// Well-known name SwayNC owns on the session bus.
+    pub const BUS_NAME: &str = "org.erikreider.swaync.cc";
+
     pub async fn new(conn: &Connection) -> Result<Self> {
         let proxy = ControlCenterProxy::new(conn)
             .await

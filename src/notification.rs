@@ -39,4 +39,7 @@ pub trait Notifications {
         hints: HashMap<&str, &Value<'_>>,
         expire_timeout: i32,
     ) -> zbus::Result<u32>;
+
+    /// Returns the server's name, vendor, version and spec version.
+    fn get_server_information(&self) -> zbus::Result<(String, String, String, String)>;
 }
