@@ -4,17 +4,17 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.93"
-clap = { version = "4.5.20", features = ["derive"] }
-clap_complete = "4.5.20"
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+clap_complete = "4.6.11"
 dirs = "5.0.1"
-env_logger = "0.11.5"
-log = "0.4.22"
-once_cell = "1.21.3"
-regex = "1.11.1"
-serde = { version = "1.0.215", features = ["derive"] }
+env_logger = "0.11.11"
+log = "0.4.34"
+once_cell = "1.21.4"
+regex = "1.13.1"
+serde = { version = "1.0.229", features = ["derive"] }
 swayipc-async = "2.0.4"
 
-tokio = { version = "1.41.1", features = ["full"] }
+tokio = { version = "1.54.1", features = ["full"] }
 toml = "0.8.19"
-zbus = "5.1.1"
+zbus = "5.19.0"
