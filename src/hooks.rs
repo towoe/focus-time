@@ -61,6 +61,8 @@ async fn run(command: &str) -> Result<(), String> {
         .arg("-c")
         .arg(command)
         .stdin(Stdio::null())
+        // Responses like a webhook's `OK` would clutter the terminal; errors on stderr stay.
+        .stdout(Stdio::null())
         .process_group(0)
         .kill_on_drop(true)
         .spawn()
