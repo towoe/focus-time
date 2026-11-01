@@ -3,7 +3,7 @@
 mod sway;
 mod waybar;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use log::debug;
 
 use sway::SwayBars;
@@ -17,17 +17,18 @@ pub enum Bar {
 
 impl Bar {
     /// Connects to the bar's controller: Sway when it runs, otherwise Waybar directly.
-    pub async fn connect() -> Result<Self> {
+    /// Returns `None` without Sway or a running Waybar.
+    pub async fn connect() -> Result<Option<Self>> {
         // Under Sway, bar modes also reach a Waybar with `"ipc": true`.
         if std::env::var_os("SWAYSOCK").is_some() {
             debug!("Using Sway IPC for the bar");
-            return Ok(Self::Sway(SwayBars::new().await?));
+            return Ok(Some(Self::Sway(SwayBars::new().await?)));
         }
-        if let Some(waybar) = Waybar::find() {
+        let waybar = Waybar::find();
+        if waybar.is_some() {
             debug!("Using Waybar signals for the bar");
-            return Ok(Self::Waybar(waybar));
         }
-        bail!("No supported status bar found, expected Sway or Waybar (use -s to skip hiding)")
+        Ok(waybar.map(Self::Waybar))
     }
 
     /// Hides the bar, remembering how to bring it back.
