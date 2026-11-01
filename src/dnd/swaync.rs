@@ -9,11 +9,14 @@ use zbus::{proxy, Connection};
     default_path = "/org/erikreider/swaync/cc"
 )]
 trait ControlCenter {
+    fn get_dnd(&self) -> zbus::Result<bool>;
     fn set_dnd(&self, state: bool) -> zbus::Result<()>;
 }
 
 pub struct SwayNc {
     proxy: ControlCenterProxy<'static>,
+    /// DND state from before [`SwayNc::enable`].
+    saved: bool,
 }
 
 impl SwayNc {
@@ -21,10 +24,18 @@ impl SwayNc {
         let proxy = ControlCenterProxy::new(conn)
             .await
             .context("Failed to connect to SwayNC. Is SwayNC running?")?;
-        Ok(Self { proxy })
+        Ok(Self {
+            proxy,
+            saved: false,
+        })
     }
 
-    pub async fn set_dnd(&self, state: bool) -> Result<()> {
-        Ok(self.proxy.set_dnd(state).await?)
+    pub async fn enable(&mut self) -> Result<()> {
+        self.saved = self.proxy.get_dnd().await?;
+        Ok(self.proxy.set_dnd(true).await?)
+    }
+
+    pub async fn restore(&mut self) -> Result<()> {
+        Ok(self.proxy.set_dnd(self.saved).await?)
     }
 }

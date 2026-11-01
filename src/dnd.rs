@@ -18,17 +18,17 @@ impl Dnd {
         Ok(Self::SwayNc(SwayNc::new(conn).await?))
     }
 
-    /// Turns do-not-disturb on.
+    /// Turns do-not-disturb on, remembering the state it replaces.
     pub async fn enable(&mut self) -> Result<()> {
         match self {
-            Self::SwayNc(swaync) => swaync.set_dnd(true).await,
+            Self::SwayNc(swaync) => swaync.enable().await,
         }
     }
 
-    /// Turns do-not-disturb off again.
+    /// Puts do-not-disturb back to its state before [`Dnd::enable`].
     pub async fn restore(&mut self) -> Result<()> {
         match self {
-            Self::SwayNc(swaync) => swaync.set_dnd(false).await,
+            Self::SwayNc(swaync) => swaync.restore().await,
         }
     }
 }
