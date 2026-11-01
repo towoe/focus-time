@@ -2,8 +2,10 @@
 
 Focus Time is a command-line application designed to help manage focus sessions
 effectively. It allows you to set a time in which notifications are disabled. It
-integrates with [Sway](https://github.com/swaywm/sway/) and
-[SwayNC](https://github.com/ErikReider/SwayNotificationCenter/).
+integrates with [Sway](https://github.com/swaywm/sway/), and pauses
+notifications in [SwayNC](https://github.com/ErikReider/SwayNotificationCenter/)
+or [dunst](https://dunst-project.org/), whichever is running. When the session
+ends, do-not-disturb returns to the state it had before.
 
 ## Installation
 
