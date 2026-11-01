@@ -488,6 +488,7 @@ dependencies = [
  "env_logger",
  "log",
  "regex",
+ "rustix",
  "serde",
  "swayipc-async",
  "tokio",

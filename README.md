@@ -1,11 +1,17 @@
 # Focus Time
 
 Focus Time is a command-line application designed to help manage focus sessions
-effectively. It allows you to set a time in which notifications are disabled. It
-integrates with [Sway](https://github.com/swaywm/sway/), and pauses
-notifications in [SwayNC](https://github.com/ErikReider/SwayNotificationCenter/)
-or [dunst](https://dunst-project.org/), whichever is running. When the session
+effectively. It allows you to set a time in which notifications are disabled and
+the status bar is hidden. It pauses notifications in
+[SwayNC](https://github.com/ErikReider/SwayNotificationCenter/) or
+[dunst](https://dunst-project.org/), whichever is running. When the session
 ends, do-not-disturb returns to the state it had before.
+
+The status bar is hidden through [Sway](https://github.com/swaywm/sway/) when it
+runs, and otherwise through [Waybar](https://github.com/Alexays/Waybar) directly,
+e.g. under [niri](https://github.com/YaLTeR/niri). Waybar is toggled with
+`SIGUSR1`, so it has to be visible when the session starts and keep the default
+`on-sigusr1` action, `toggle`.
 
 ## Installation
 
@@ -93,6 +99,15 @@ session and stop the timer using the following configuration.
 # Focus time
 bindsym $mod+o exec focus-time 25m
 bindsym $mod+Shift+o exec focus-time stop
+```
+
+The same for niri:
+
+```kdl
+binds {
+    Mod+O { spawn "focus-time" "25m"; }
+    Mod+Shift+O { spawn "focus-time" "stop"; }
+}
 ```
 
 ## Shell Completion
