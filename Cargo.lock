@@ -487,7 +487,6 @@ dependencies = [
  "dirs",
  "env_logger",
  "log",
- "once_cell",
  "regex",
  "serde",
  "swayipc-async",

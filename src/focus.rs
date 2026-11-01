@@ -8,12 +8,11 @@ use crate::swaync_interface::SwayNCInterface;
 use crate::timer::Timer;
 
 use anyhow::Result;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use std::time::Duration;
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, LazyLock, Mutex},
 };
 use tokio::sync::oneshot;
 use tokio::time::sleep;
@@ -116,7 +115,7 @@ fn get_duration(
 ///
 /// * `Option<Duration>` - Returns `Some(Duration)` if the input is valid, otherwise `None`.
 pub fn parse_duration(input: &str) -> Option<Duration> {
-    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\d+)([dhms])$").unwrap());
+    static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\d+)([dhms])$").unwrap());
 
     let caps = RE.captures(input.trim())?;
     let number_part = &caps[1];
