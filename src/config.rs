@@ -5,6 +5,8 @@
 use serde::Deserialize;
 use std::path::Path;
 
+use crate::hooks::Hooks;
+
 use log::{debug, trace};
 
 /// Configuration for the focus timer.
@@ -20,6 +22,9 @@ pub struct ConfigFile {
     pub keep_status_bar: Option<bool>,
     /// Whether to print the remaining time.
     pub print_time: Option<bool>,
+    /// Commands to run when a session starts and ends.
+    #[serde(default)]
+    pub hooks: Hooks,
 }
 
 /// Loads the configuration from a file.

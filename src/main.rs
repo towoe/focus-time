@@ -5,6 +5,7 @@ mod config;
 mod dnd;
 mod focus;
 mod focus_interface;
+mod hooks;
 mod notification;
 mod notification_interface;
 mod timer;

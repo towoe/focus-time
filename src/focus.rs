@@ -4,6 +4,7 @@ use crate::config::{self, ConfigFile};
 use crate::dnd::Dnd;
 use crate::focus;
 use crate::focus_interface::FocusTime;
+use crate::hooks::Hooks;
 use crate::notification_interface::NotificationInterface;
 use crate::timer::Timer;
 
@@ -45,6 +46,8 @@ pub struct FocusConfig {
     keep_status_bar: bool,
     /// Whether to print the remaining time.
     print_time: bool,
+    /// Commands to run when the session starts and ends.
+    hooks: Hooks,
 }
 
 /// Creates a `FocusConfig` from the provided `ConfigFile` and `Cli` arguments.
@@ -64,6 +67,7 @@ pub fn create_config(file_config: ConfigFile, args: Cli) -> anyhow::Result<Focus
         no_notification: args.no_notification || file_config.no_notification.unwrap_or(false),
         keep_status_bar: args.keep_status_bar || file_config.keep_status_bar.unwrap_or(false),
         print_time: args.print_time || file_config.print_time.unwrap_or(false),
+        hooks: file_config.hooks,
     })
 }
 
@@ -201,6 +205,7 @@ impl Focus {
         if let Some(bar) = &mut bar {
             bar.hide().await?;
         }
+        self.config.hooks.run_start().await;
 
         if self.config.print_time {
             let timer_clone = Arc::clone(&self.timer);
@@ -270,6 +275,7 @@ impl Focus {
         if let Some(bar) = &mut bar {
             bar.restore().await?;
         }
+        self.config.hooks.run_end().await;
 
         let mut hints = HashMap::new();
         hints.insert("urgency", &Value::U8(2));
