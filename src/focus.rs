@@ -205,7 +205,7 @@ impl Focus {
         if let Some(bar) = &mut bar {
             bar.hide().await?;
         }
-        self.config.hooks.run_start().await;
+        let start_hooks = self.config.hooks.spawn_start();
 
         if self.config.print_time {
             let timer_clone = Arc::clone(&self.timer);
@@ -274,6 +274,9 @@ impl Focus {
 
         if let Some(bar) = &mut bar {
             bar.restore().await?;
+        }
+        if let Err(err) = start_hooks.await {
+            eprintln!("Warning: the start hooks didn't finish: {err}");
         }
         self.config.hooks.run_end().await;
 

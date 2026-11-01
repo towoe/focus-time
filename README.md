@@ -71,7 +71,9 @@ print-time = false
 
 Commands in the `[hooks]` table run through `sh -c` when a session starts and
 when it ends, also when it is stopped early. They run one after another, each
-may take up to 10 seconds, and a failing command only prints a warning.
+may take up to 10 seconds, and a failing command only prints a warning. The
+start commands run while the timer already counts down; the end commands wait
+for them to finish.
 
 For example, to switch do-not-disturb on an Android phone through a
 [MacroDroid](https://www.macrodroid.com/) webhook trigger:

@@ -10,6 +10,7 @@ use serde::Deserialize;
 use std::process::Stdio;
 use std::time::Duration;
 use tokio::process::Command;
+use tokio::task::JoinHandle;
 use tokio::time::timeout;
 
 /// How long a single hook may run before it is killed.
@@ -29,9 +30,11 @@ pub struct Hooks {
 }
 
 impl Hooks {
-    /// Runs the start commands.
-    pub async fn run_start(&self) {
-        run_all("start", &self.start).await;
+    /// Starts the start commands in the background, so a slow one doesn't eat into the
+    /// session. Await the handle before `run_end`, so the end commands run last.
+    pub fn spawn_start(&self) -> JoinHandle<()> {
+        let commands = self.start.clone();
+        tokio::spawn(async move { run_all("start", &commands).await })
     }
 
     /// Runs the end commands.
