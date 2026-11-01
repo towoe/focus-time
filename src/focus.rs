@@ -187,7 +187,13 @@ impl Focus {
         let mut bar = if self.config.keep_status_bar {
             None
         } else {
-            Some(Bar::connect().await?)
+            let bar = Bar::connect().await?;
+            if bar.is_none() {
+                eprintln!(
+                    "Warning: can't hide the status bar without Sway or a running Waybar, leaving it visible"
+                );
+            }
+            bar
         };
 
         // Set the tools to the desired state

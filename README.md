@@ -11,7 +11,8 @@ The status bar is hidden through [Sway](https://github.com/swaywm/sway/) when it
 runs, and otherwise through [Waybar](https://github.com/Alexays/Waybar) directly,
 e.g. under [niri](https://github.com/YaLTeR/niri). Waybar is toggled with
 `SIGUSR1`, so it has to be visible when the session starts and keep the default
-`on-sigusr1` action, `toggle`.
+`on-sigusr1` action, `toggle`. Without Sway or a running Waybar, the session runs
+with a warning and leaves the bar alone.
 
 ## Installation
 
