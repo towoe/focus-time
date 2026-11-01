@@ -1,13 +1,12 @@
+mod bar;
 mod cli;
 mod client;
 mod config;
+mod dnd;
 mod focus;
 mod focus_interface;
 mod notification;
 mod notification_interface;
-mod sway_ipc_interface;
-mod swaync;
-mod swaync_interface;
 mod timer;
 
 use clap::{CommandFactory, Parser};

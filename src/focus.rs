@@ -1,10 +1,10 @@
+use crate::bar::Bar;
 use crate::cli::Cli;
 use crate::config::{self, ConfigFile};
+use crate::dnd::Dnd;
 use crate::focus;
 use crate::focus_interface::FocusTime;
 use crate::notification_interface::NotificationInterface;
-use crate::sway_ipc_interface::SwayIpcInterface;
-use crate::swaync_interface::SwayNCInterface;
 use crate::timer::Timer;
 
 use anyhow::Result;
@@ -182,15 +182,18 @@ impl Focus {
     /// A `Result` indicating the success or failure of the operation.
     pub async fn run(&self) -> Result<()> {
         // Initialize the interfaces
-        let swaync = SwayNCInterface::new().await?;
-        let mut sway = SwayIpcInterface::new().await?;
-
-        let bar_modes = sway.get_bar_mode().await;
+        let session = Connection::session().await?;
+        let mut dnd = Dnd::connect(&session).await?;
+        let mut bar = if self.config.keep_status_bar {
+            None
+        } else {
+            Some(Bar::connect().await?)
+        };
 
         // Set the tools to the desired state
-        swaync.enable_dnd().await?;
-        if !self.config.keep_status_bar {
-            sway.set_bars_invisible().await?;
+        dnd.enable().await?;
+        if let Some(bar) = &mut bar {
+            bar.hide().await?;
         }
 
         if self.config.print_time {
@@ -256,10 +259,10 @@ impl Focus {
         print!("\x1B[?25h"); // Show cursor
 
         // Restore the tools and notify the user
-        swaync.disable_dnd().await?;
+        dnd.restore().await?;
 
-        if !self.config.keep_status_bar {
-            sway.restore_bar_mode(bar_modes).await?;
+        if let Some(bar) = &mut bar {
+            bar.restore().await?;
         }
 
         let mut hints = HashMap::new();
